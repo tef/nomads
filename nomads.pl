@@ -1,7 +1,8 @@
 %  Preprocessor for Prolog programs using Logical State Nomads.
 %  Version: Winter 96/97
 
-%  Modified 2008, SWI Prolog compatibility
+%  Modified 2008, for SWI Prolog compatibility
+%  Renamed to nomads as to avoid nameclashes with threads
 %
 %  ----------------------------------------------------------------------------
 %  Copyright (C) 1989 1996 Peter Van Roy and Regents of the University
@@ -28,9 +29,14 @@
 %
 %       Andreas Kagedal <andka@ida.liu.se>
 %       Peter Van Roy <pvr@info.ucl.ac.be>
+%
+%   SWI Modifications
+%       Thomas Figg <tef@nomads.twentygototen.org>
 
 
 :- module( nomads, [] ).
+
+%% SWI Note:  user: prefixes were added to ensure the operators propagated
 
 :- op(1200, xfx, user:('-->>')).   % Same as ':-'.
 :- op(1200, xfx, user:(':--' )).   % Same as ':-'.
@@ -48,10 +54,7 @@
 % If loaded into Prolog along with the appropriate declarations
 % it will be used automatically when consulting programs.
 
-% There are some additional clause for term_expansion/2 at the end of 
-% the file. (if they were defined at this point in the file they would
-% start expanding the clauses of this file before it was completely
-% loaded, thus using predicates that has still not been definied.
+%% SWI Note: defining the local term_expansion
 
 :- multifile
     term_expansion/2.
@@ -127,12 +130,12 @@ term_expansion_edcg_clause(H, B, (TH:-TB)) :-
         '_expand_goal'(B, TB, Acc, NewAcc, Pass, Na/Ar),
         finish_acc(NewAcc), !.
 term_expansion_edcg_clause(H, B, (H:-B)) :-
-  fue( "~N%%%%%% The EDCG system failed to expand the clause:~n"        ),
+  fue( "~N%%%%%% The nomads system failed to expand the clause:~n"        ),
   fue( "%%%%%%~n"                                                       ),
   fue( "%%%%%%    ~w :-- ~w.~n",                                 [H, B] ),
   fue( "%%%%%%~n"                                                       ),
-  fue( "%%%%%% This should not happen and is bug in the EDCG system.~n" ),
-  fue( "%%%%%% Please send a bug report to andka@ida.liu.se~n"          ),
+  fue( "%%%%%% This should not happen and is bug in the system.~n" ),
+  fue( "%%%%%% Please send a bug report ~n"          ),
   fue( "%%%%%% [...]~n~n"                                                   ).
 
 fue( Str ) :- format(user_error, Str, [] ).
@@ -1483,11 +1486,6 @@ pass_name( PassName, I, PassFrame, V ) :-
 %         ).
 % to get rid of the last 'true' if possible.
 
-% memberchk/2 and append/3 exists in library(lists).
-
-'_append'([], L, L).
-'_append'([X|L1], L2, [X|L3]) :- '_append'(L1, L2, L3).
-
 '_list'(L) :- nonvar(L), L=[_|_], !.
 '_list'(L) :- L==[], !.
 
@@ -1942,6 +1940,9 @@ term_expansion(Fact, _) :-
 	functor(Fact,P,A),
 	edcg_warning("~w/~w defined by a 'fact clause' although it has hidden args.", [P,A]),
 	fail.
+
+%% SWI Note: this was added to enable the transformations globally, but it needs 
+   to be defined last to stop it being executed prematurely.
 
 :- multifile
     user:term_expansion/2.
