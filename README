@@ -1,0 +1,17 @@
+nomads - a logical state thread for swi prolog
+
+nomads is a library to allow you to do declarative programming with state.
+
+this is a port of the original code for 'logical state threads' to swi prolog
+which in turn was based on the EDCG work.  logical state threads were developed
+by Andreas Kagedal and Peter van Roy.
+
+It is best to think of it of it as a way to add mutable-like data to dcg's.
+the idea is that you have named datatypes, with defined operators.
+
+check examples/* to see this in action (lifted from the tutorial)
+
+more information is avaliable in old/* and doc/*
+
+the name was changed to avoid collisions with existing threading libraries.
+
