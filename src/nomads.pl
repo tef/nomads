@@ -1,5 +1,7 @@
-%  Preprocessor for Prolog programs using Logical State Threads.
+%  Preprocessor for Prolog programs using Logical State Nomads.
 %  Version: Winter 96/97
+
+%  Modified 2008, SWI Prolog compatibility
 %
 %  ----------------------------------------------------------------------------
 %  Copyright (C) 1989 1996 Peter Van Roy and Regents of the University
@@ -22,15 +24,13 @@
 %  http://www.gnu.ai.mit.edu/copyleft/lgpl.html
 %  ----------------------------------------------------------------------------
 %
-%  Comments, suggestions, flames, manifestos, and bug reports are 
-%  most welcome. Please send to:
+%   Original Authors: 
 %
 %       Andreas Kagedal <andka@ida.liu.se>
-%   or        
 %       Peter Van Roy <pvr@info.ucl.ac.be>
 
 
-:- module( threads, [] ).
+:- module( nomads, [] ).
 
 :- use_module(library(versions)).
 
@@ -59,7 +59,7 @@
 % Reinitializing the DB.
 % When recompiling a module which contains accumulator declarations, 
 % old information concerning this module must be removed from the 
-% data base. This is accomplished by calling threads:reinitialize_db/1
+% data base. This is accomplished by calling nomads:reinitialize_db/1
 % when a `:-ensure_loaded(edcg)' or similar directive is found in 
 % the compiled module.
 
@@ -81,28 +81,28 @@ term_expansion( (:- EDCG_UseDecl), [] ) :-
 % ------------------------
 % Expanding The Declarations.
 
-term_expansion( (:- thread(Acc,Methods)), [] ) :-
+term_expansion( (:- nomad(Acc,Methods)), [] ) :-
         edcg_acc( Acc, Methods, forward, no_init_value ).
-term_expansion( (:- thread(Acc,Methods,Init)), [] ) :-
+term_expansion( (:- nomad(Acc,Methods,Init)), [] ) :-
         edcg_acc( Acc, Methods, forward, init_value(Init) ).
 
 
-term_expansion( (:- thread_bwd(Acc,Methods)),[] ) :-
+term_expansion( (:- nomad_bwd(Acc,Methods)),[] ) :-
         edcg_acc( Acc, Methods, backward, no_init_value ).
-term_expansion( (:- thread_bwd(Acc,Methods,Init)), [] ) :-
+term_expansion( (:- nomad_bwd(Acc,Methods,Init)), [] ) :-
         edcg_acc( Acc, Methods, backward, init_value(Init) ).
 
 
-term_expansion( (:- thread_pass(Pass)), [] ) :-
+term_expansion( (:- nomad_pass(Pass)), [] ) :-
 	edcg_pass(Pass, no_init_value).
-term_expansion( (:- thread_pass(Pass,Init)), [] ) :-
+term_expansion( (:- nomad_pass(Pass,Init)), [] ) :-
 	edcg_pass(Pass,init_value(Init)).
 
-term_expansion( (:- thread_method(Method,Old,New,Joiner)), [] ) :-
+term_expansion( (:- nomad_method(Method,Old,New,Joiner)), [] ) :-
 	edcg_method( Method, Old, New, Joiner ).
 
 
-term_expansion( (:- thread_pred(PredArity,Accs)), [] ) :-
+term_expansion( (:- nomad_pred(PredArity,Accs)), [] ) :-
         edcg_pred(PredArity,Accs).
 
 
@@ -144,13 +144,12 @@ fue( Str, L ) :- format(user_error, Str, L ).
 % cannot contain a 'multifile' declaration.  With an ISO Prolog, like 
 % SICStus 3, it works fine.
 
-:- begin_version(sicstus3).
-% in SICStus 2 the multifile decl in versions.pl is enough.
-:- multifile user:term_expansion/2.
+:- multifile
+    user:term_expansion/2.
+:- dynamic
+    user:term_expansion/2.
 
-:- end_version(sicstus3).
-
-user:term_expansion(X,Y) :- threads:term_expansion(X,Y).
+user:term_expansion(X,Y) :- nomads:term_expansion(X,Y).
 
 
 % ------------------------
@@ -163,8 +162,8 @@ edcg_use_decl( ensure_loaded(EDCG_ModFile) ) :-
 edcg_use_decl( use_module(EDCG_ModFile) ) :-
 	edcg_module_filenam( EDCG_ModFile ).
 
-edcg_module_filenam( threads ).
-edcg_module_filenam( library(threads) ).
+edcg_module_filenam( nomads ).
+edcg_module_filenam( library(nomads) ).
 
 
 % Expand a goal:
@@ -189,9 +188,9 @@ edcg_module_filenam( library(threads) ).
         '_expand_goal'(G2, TG2, MidAcc, NewAcc, Pass, Cntxt).
 
 '_expand_goal'({G}, G, Acc, Acc, _, _Cntxt) :- !.
-%'_expand_goal'(thread_insert(X,Y), Exp, Acc, NewAcc, _, _Cntxt) :-
+%'_expand_goal'(nomad_insert(X,Y), Exp, Acc, NewAcc, _, _Cntxt) :-
 %	acc_insert( dcg, X, Y, Exp, Acc, NewAcc ).
-%'_expand_goal'(thread_insert(A,X,Y), Exp, Acc, NewAcc, _, _Cntxt) :-
+%'_expand_goal'(nomad_insert(A,X,Y), Exp, Acc, NewAcc, _, _Cntxt) :-
 %	acc_insert( A, X, Y, Exp, Acc, NewAcc ).
 %% Force hidden arguments in L to be appended to G:
 %'_expand_goal'((G::A), TG, _, Acc, NewAcc, Pass) :-
@@ -212,7 +211,7 @@ edcg_module_filenam( library(threads) ).
 	default_update_acc( L, A, Cntxt, Updater, Acc, NewAcc ).
 '_expand_goal'((A::Method), Updater, Acc, NewAcc, _, Cntxt) :-
         update_acc( named(Method), A, Cntxt, Updater, Acc, NewAcc ).
-'_expand_goal'(thread_val(A,X), Exp, Acc, Acc, Pass, _Cntxt) :-
+'_expand_goal'(nomad_val(A,X), Exp, Acc, Acc, Pass, _Cntxt) :-
 	arg_val( A, X, Exp, Acc, Pass ).
 
 % Defaulty cases:
@@ -244,16 +243,16 @@ edcg_module_filenam( library(threads) ).
 % 	     ),
 % 	     Exp = (ExpX,ExpY)
 %           ;  ( A = dcg
-% 	       -> edcg_error("thread_insert(~w, ~w), accumulator `dcg' is not defined in this context!",
+% 	       -> edcg_error("nomad_insert(~w, ~w), accumulator `dcg' is not defined in this context!",
 % 	                [X,Y] )
-% 	       ;  edcg_error("thread_insert(~w, ~w, ~w), accumulator `~w` is not defined in this context!",
+% 	       ;  edcg_error("nomad_insert(~w, ~w, ~w), accumulator `~w` is not defined in this context!",
 % 	                [A,X,Y,A] )
 % 	     ),
 %              Exp = true
 % 	).
 % acc_insert( A, X, Y, true, Acc, Acc ) :-
 %         \+ is_acc_name( A ),
-% 	edcg_error("thread_insert(~w, ~w, ~w), `~w` is not an accumulator!",
+% 	edcg_error("nomad_insert(~w, ~w, ~w), `~w` is not an accumulator!",
 % 	           [A,X,Y,A] ).
 
 
@@ -265,14 +264,14 @@ arg_val( P, X, Exp, _Acc, Pass ) :-
 	       -> X = X1, Exp = true
 	       ;  Exp = (X = X1)
 	     )
-	  ;  edcg_error("thread_val(~w, ~w), passed arg. `~w' is not defined in this context!",
+	  ;  edcg_error("nomad_val(~w, ~w), passed arg. `~w' is not defined in this context!",
 	                     [P,X,P] ),
 	          Exp = true
 	).
 arg_val( A, X, true, _Acc, _Pass ) :-
 	\+ is_pass_name( A ),
 	!,
-	edcg_error("thread_val(~w, ~w), `~w' is not a passed argument!",
+	edcg_error("nomad_val(~w, ~w), `~w' is not a passed argument!",
 	           [A,X,A] ).
 
 
@@ -1302,7 +1301,7 @@ acc_name( AccName, UI, AccsFrame, Ini, Fin ) :-
 	is_acc_name( AccName ),
 	( UI == init  -> acc_default_init_value( AccName, DefInit ),
                          ( DefInit = no_init_value 
-                           -> edcg_error( "Thread `~w' does not have a default initial value!", [AccName] )
+                           -> edcg_error( "Nomad `~w' does not have a default initial value!", [AccName] )
                            ; DefInit = init_value(Ini)
                          )
 	; UI == var  -> true % I.e. Ini is left uninstantiated.
@@ -1558,13 +1557,9 @@ loading_module( Module ) :-
            % currently beein loaded.  We only want the most current 
            % one, and fail it that was not good enough. Thus the cut.
 
-:- begin_version(sicstus3).
-
 loading_file_position( LineNo ) :-
 	prolog_load_context( stream, Stream ),
 	line_count( Stream, LineNo ).
-
-:- end_version(sicstus3).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1573,24 +1568,24 @@ loading_file_position( LineNo ) :-
 % A programmer can define hidden arguments and associate them
 % with predicates using the following declarations:
 %
-% :- thread(Acc, Term, Old, New, Joiner).
-% :- thread(Acc, Term, Old, New, Joiner, Init).
+% :- nomad(Acc, Term, Old, New, Joiner).
+% :- nomad(Acc, Term, Old, New, Joiner, Init).
 %
-% :- thread_bwd(Acc, Term, Old, New, Joiner).
-% :- thread_bwd(Acc, Term, Old, New, Joiner, Init).
+% :- nomad_bwd(Acc, Term, Old, New, Joiner).
+% :- nomad_bwd(Acc, Term, Old, New, Joiner, Init).
 %
-% :- thread_pass(Pass).
-% :- thread_pass(Pass, PStart).
+% :- nomad_pass(Pass).
+% :- nomad_pass(Pass, PStart).
 %
-% :- thread_method(Method, Old, New, Joiner).
+% :- nomad_method(Method, Old, New, Joiner).
 %
-% :- thread_pred(Pred/Arity,Accs).
+% :- nomad_pred(Pred/Arity,Accs).
 
 
 
 edcg_acc( Acc, Methods, Dir, Init ) :-
   (    \+ atomic( Acc )
-    -> edcg_error("thread(~w...): `~w' is not a name", [Acc,Acc])
+    -> edcg_error("nomad(~w...): `~w' is not a name", [Acc,Acc])
     ;  is_acc_name(Acc)
     -> edcg_warning("Accumlator `~w' defined more than once!", [Acc])
     ;  is_pass_name(Acc)
@@ -1605,7 +1600,7 @@ edcg_acc( Acc, Methods, Dir, Init ) :-
 
 edcg_pass(Pass, PStart) :-
    (    \+ atomic( Pass )
-     -> edcg_error("thread_pass(~w...): ~w is not a name", [Pass,Pass])
+     -> edcg_error("nomad_pass(~w...): ~w is not a name", [Pass,Pass])
      ;  is_pass_name(Pass)
      -> edcg_warning("Passed arg. '~w' defined more than once!", [Pass])
      ;  is_acc_name(Pass)
@@ -1624,7 +1619,7 @@ edcg_pred( PredArity, Accs ) :-
 	           assert( pred_info(Pred,Arity,Mod,File,Accs) )
                 ;  edcg_error("Hidden args. for predicate '~w/~w' declared more than once!", [Pred,Arity])
 	     )
-	  ;  edcg_error("thread_pred(~w, ~w): `~w' does not have the form '<name>/<arity>'.", [PredArity,Accs,PredArity])
+	  ;  edcg_error("nomad_pred(~w, ~w): `~w' does not have the form '<name>/<arity>'.", [PredArity,Accs,PredArity])
 	).
 
 
@@ -1636,13 +1631,13 @@ edcg_method( MethodTerm, Old, New, Joiner ) :-
                 loading_module_and_file( Mod, File ),
 	        functor( MethodTerm, MName, MArity ),
                 ( acc_method_arity( MName, _ )
-                  -> edcg_error( "thread_method(~w, ~w, ~w, ~w): Method `~w' defined more than once.", [MethodTerm,Old,New,Joiner,MName] )
+                  -> edcg_error( "nomad_method(~w, ~w, ~w, ~w): Method `~w' defined more than once.", [MethodTerm,Old,New,Joiner,MName] )
                   ;  assert( method_info(MethodTerm,MName,MArity,Mod,File,Old,New,Joiner) )
 		)
         ; var( MethodTerm )
-             -> edcg_error( "thread_method(~w, ~w, ~w, ~w): The first argument must be a method name (with args).", [MethodTerm,Old,New,Joiner] )
+             -> edcg_error( "nomad_method(~w, ~w, ~w, ~w): The first argument must be a method name (with args).", [MethodTerm,Old,New,Joiner] )
 	; % else
-                edcg_error( "thread_method(~w, ~w, ~w, ~w): The arguments of the method must be distinct variables.", [MethodTerm,Old,New,Joiner] )
+                edcg_error( "nomad_method(~w, ~w, ~w, ~w): The arguments of the method must be distinct variables.", [MethodTerm,Old,New,Joiner] )
         ).
 
 
@@ -1757,7 +1752,7 @@ add_dcg_rule :-
 :- add_dcg_rule.
 
 add_builtin_methods :-
-   assert(method_info(value(V),value,1,_Mod,_File,Thread,Thread,V=Thread)).
+   assert(method_info(value(V),value,1,_Mod,_File,Nomad,Nomad,V=Nomad)).
 
 :- add_builtin_methods.
 
@@ -1929,50 +1924,18 @@ check_init_def([InitAcc|InitAccs], DefAccs, G) :-
 
 %------------------
 
-:- begin_version(sicstus3). 
 
 edcg_error(ErrorMsg, Args) :-
 	loading_file_position( LineNo ),
-	format(user_error, "~N{Threads Error (line: ~w): ", [LineNo] ),
+	format(user_error, "~N{Nomads Error (line: ~w): ", [LineNo] ),
 	format(user_error, ErrorMsg,                     Args     ),
 	format(user_error, "}~n",                        []       ).
 
 edcg_warning(WarningMsg, Args) :-
 	loading_file_position( LineNo ),
-	format(user_error, "~N{Threads Warning (line: ~w): ", [LineNo]   ),
+	format(user_error, "~N{Nomads Warning (line: ~w): ", [LineNo]   ),
 	format(user_error, WarningMsg,                     Args ),
 	format(user_error, "}~n",                          []   ).
-
-:- end_version(sicstus3). 
-
-:- begin_version(sicstus2).
-
-edcg_error(ErrorMsg, Args) :-
-	format(user_error, "~N{Threads Error: ", [] ),
-	format(user_error, ErrorMsg,             Args     ),
-	format(user_error, "}~n",                []       ).
-
-edcg_warning(WarningMsg, Args) :-
-	format(user_error, "~N{Threads Warning: ", []   ),
-	format(user_error, WarningMsg,             Args ),
-	format(user_error, "}~n",                  []   ).
-
-:- end_version(sicstus2).
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% prolog_load_context/2 is a builtin in SICStus 3. 
-% If this file is used with SICStus 2.1 uncomment the follwing:
-
-:- begin_version(sicstus2). %-------------------------------------------
-
-prolog_load_context(file, Filename) :-
-	current_stream(Filename,read,_Stream).
-prolog_load_context(module, Module) :-
-	prolog_flag(typein_module, Module).
-
-:- end_version(sicstus2). %---------------------------------------------
 
 
 
