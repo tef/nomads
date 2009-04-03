@@ -1942,7 +1942,7 @@ term_expansion(Fact, _) :-
 	fail.
 
 %% SWI Note: this was added to enable the transformations globally, but it needs 
-   to be defined last to stop it being executed prematurely.
+%% to be defined last to stop it being executed prematurely.
 
 :- multifile
     user:term_expansion/2.
