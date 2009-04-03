@@ -32,14 +32,12 @@
 
 :- module( nomads, [] ).
 
-:- use_module(library(versions)).
-
-:- op(1200, xfx, ['-->>']).   % Same as ':-'.
-:- op(1200, xfx, [':--' ]).   % Same as ':-'.
-:- op( 850, xfx, ['::'  ]).   % Slightly tighter than ',' and '\+'.
-:- op( 850, xfy, [ with ]).   % Slightly tighter than ',' and '\+'.
-:- op( 500, xfy, [ =>   ]).
-:- op( 500, xfy, [ :=   ]).
+:- op(1200, xfx, user:('-->>')).   % Same as ':-'.
+:- op(1200, xfx, user:(':--' )).   % Same as ':-'.
+:- op( 850, xfx, user:('::'  )).   % Slightly tighter than ',' and '\+'.
+:- op( 850, xfy, user:(with)).   % Slightly tighter than ',' and '\+'.
+:- op( 500, xfy, user:(=>)).
+:- op( 500, xfy, user:(:=)).
 
 
 
@@ -54,6 +52,12 @@
 % the file. (if they were defined at this point in the file they would
 % start expanding the clauses of this file before it was completely
 % loaded, thus using predicates that has still not been definied.
+
+:- multifile
+    term_expansion/2.
+:- dynamic
+    term_expansion/2.
+
 
 
 % Reinitializing the DB.
@@ -136,20 +140,6 @@ fue( Str ) :- format(user_error, Str, [] ).
 fue( Str, L ) :- format(user_error, Str, L ).
 
 
-% Used with a non-ISO prolog (like SICStus 2.x) this 'multifile' 
-% declaration does not allway work properly. (In SICStus 2.x a 
-% 'multifile' declaration for a predicate can only be made in one
-% file, which means that if this file is loaded with some other file
-% that also defines clauses for user:term_expansion/2 then both of them 
-% cannot contain a 'multifile' declaration.  With an ISO Prolog, like 
-% SICStus 3, it works fine.
-
-:- multifile
-    user:term_expansion/2.
-:- dynamic
-    user:term_expansion/2.
-
-user:term_expansion(X,Y) :- nomads:term_expansion(X,Y).
 
 
 % ------------------------
@@ -1337,8 +1327,8 @@ pass( PassArg, _I, _Pass, Globs, NewGlobs, PassFrame, _V ) :-
 
 % Pass --> PassBasic                       --------------------------------
 
-pass( PassArg, I, _Pass, Globs, NewGlobs, PassFrame, V ) :-
-	pass_basic( PassArg, I, _Pass, Globs, NewGlobs, PassFrame, V ),
+pass( PassArg, I, Pass, Globs, NewGlobs, PassFrame, V ) :-
+	pass_basic( PassArg, I, Pass, Globs, NewGlobs, PassFrame, V ),
 	!.
 
 % Pass --> glob(PassName)                  --------------------------------
@@ -1494,9 +1484,6 @@ pass_name( PassName, I, PassFrame, V ) :-
 % to get rid of the last 'true' if possible.
 
 % memberchk/2 and append/3 exists in library(lists).
-
-memberchk(X, [X|_]) :- !.
-memberchk(X, [_|L]) :- memberchk(X, L).
 
 '_append'([], L, L).
 '_append'([X|L1], L2, [X|L3]) :- '_append'(L1, L2, L3).
@@ -1828,8 +1815,8 @@ pass_default_init_value( PassName, PStart ) :-
 '_has_hidden'(GModule1:G, GModule2, []) :-
 	\+ GModule1 = GModule2,
         functor(G, GName, GArity),
-        ( pred_info(GName, GArity, GModule1, _File, []), !
-        ; \+ pred_info(GName, GArity, GModule1, _File, _)
+        ( pred_info(GName, GArity, GModule1, File, []), !
+        ; \+ pred_info(GName, GArity, GModule1, File, _)
         ).
 '_has_hidden'(Module1:G, Module2, GList) :-
 	\+ Module1 = Module2,
@@ -1955,4 +1942,11 @@ term_expansion(Fact, _) :-
 	functor(Fact,P,A),
 	edcg_warning("~w/~w defined by a 'fact clause' although it has hidden args.", [P,A]),
 	fail.
+
+:- multifile
+    user:term_expansion/2.
+:- dynamic
+    user:term_expansion/2.
+
+user:term_expansion(X,Y) :- nomads:term_expansion(X,Y).
 
