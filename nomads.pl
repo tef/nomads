@@ -206,7 +206,8 @@ edcg_module_filenam( library(nomads) ).
         update_acc( named(Method), A, Cntxt, Updater, Acc, NewAcc ).
 '_expand_goal'(nomad_val(A,X), Exp, Acc, Acc, Pass, _Cntxt) :-
 	arg_val( A, X, Exp, Acc, Pass ).
-
+'_expand_goal'(thread_create(G, Id, Opt), thread_create(TG, Id, Opt), Acc, Acc, Pass, Cntxt) :-
+	'_expand_goal'(G, TG, Acc, _, Pass, Cntxt). % discard Acc due to threads not sharing data
 % Defaulty cases:
 '_expand_goal'(G, TG, Acc, NewAcc, Pass, Cntxt) :-
         '_has_hidden'(G, GList), !,
